@@ -36,48 +36,70 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		// handle error
-		log.Fatal(err)
+		log.Printf("Bad request, %v", err)
+		w.WriteHeader(500)
+		return
+	}
+
+	if resp.StatusCode != 200 {
+		log.Println("Could not retrieve country")
+		w.WriteHeader(400)
+		return
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 
+	if err != nil {
+		log.Printf("Body read error, %v", err)
+		w.WriteHeader(500)
+		return
+	}
+
 	var information []Information
 
-	if err != nil {
-		fmt.Fprint(w, "Error while retrieving country currency")
-	} else {
-		json.Unmarshal([]byte(string(body)), &information)
-		beginDateEndDate := vars["begin_date-end_date"]
-		splitdate := strings.Split(beginDateEndDate, "-")
-		if len(splitdate) < 6 {
-			// String error
-			fmt.Fprint(w, "Error in string")
-		} else {
-			beginDate := splitdate[0] + "-" + splitdate[1] + "-" + splitdate[2]
-			endDate := splitdate[3] + "-" + splitdate[4] + "-" + splitdate[5]
-			respEx, err := http.Get("https://api.exchangeratesapi.io/history?start_at=" + beginDate + "&end_at=" + endDate + "&symbols=" + information[0].Currencies[0].Code)
-			if err != nil {
-				// handle error
-				log.Fatal(err)
-			}
-
-			bodyEx, err := ioutil.ReadAll(respEx.Body)
-
-			if err != nil {
-				//Error while retrieving exchange rates
-				fmt.Fprint(w, "Error while retrieving exchange rates")
-				log.Fatal(err)
-			} else {
-				var prettyJSON bytes.Buffer
-				err := json.Indent(&prettyJSON, bodyEx, "", "\t")
-				if err != nil {
-					log.Fatal(err)
-				}
-
-				fmt.Fprintf(w, "%s", string(prettyJSON.Bytes()))
-			}
-		}
+	if err := json.Unmarshal([]byte(string(body)), &information); err != nil {
+		log.Printf("Body parse error, %v", err)
+		w.WriteHeader(500)
+		return
 	}
+	beginDateEndDate := vars["begin_date-end_date"]
+	splitdate := strings.Split(beginDateEndDate, "-")
+
+	if len(splitdate) < 6 {
+		// String error
+		log.Printf("Error in date query")
+		w.WriteHeader(400)
+		return
+	}
+	beginDate := splitdate[0] + "-" + splitdate[1] + "-" + splitdate[2]
+	endDate := splitdate[3] + "-" + splitdate[4] + "-" + splitdate[5]
+	respEx, err := http.Get("https://api.exchangeratesapi.io/history?start_at=" + beginDate + "&end_at=" + endDate + "&symbols=" + information[0].Currencies[0].Code)
+	if err != nil {
+		// Handles
+		log.Printf("Bad Request, %v", err)
+		w.WriteHeader(500)
+		return
+	}
+	if respEx.StatusCode != 200 {
+		log.Println("Could not retrieve exchange rates")
+		w.WriteHeader(400)
+		return
+	}
+	bodyEx, err := ioutil.ReadAll(respEx.Body)
+
+	if err != nil {
+		log.Printf("Body read error, %v", err)
+		w.WriteHeader(500)
+		return
+	}
+	var prettyJSON bytes.Buffer
+	jsonErr := json.Indent(&prettyJSON, bodyEx, "", "\t")
+	if jsonErr != nil {
+		log.Printf("JSON indenting error, %v", err)
+		w.WriteHeader(500)
+		return
+	}
+	fmt.Fprintf(w, "%s", string(prettyJSON.Bytes()))
 }
 
 func exchangeborder(w http.ResponseWriter, r *http.Request) {
