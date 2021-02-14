@@ -43,7 +43,7 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 
 	var information []Information
 
-	if resp.StatusCode != 200 {
+	if err != nil {
 		fmt.Fprint(w, "Error while retrieving country currency")
 	} else {
 		json.Unmarshal([]byte(string(body)), &information)
@@ -61,14 +61,18 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 				log.Fatal(err)
 			}
 
-			bodyEx, _ := ioutil.ReadAll(respEx.Body)
+			bodyEx, err := ioutil.ReadAll(respEx.Body)
 
-			if respEx.StatusCode != 200 {
+			if err != nil {
 				//Error while retrieving exchange rates
 				fmt.Fprint(w, "Error while retrieving exchange rates")
+				log.Fatal(err)
 			} else {
 				var prettyJSON bytes.Buffer
-				json.Indent(&prettyJSON, bodyEx, "", "\t")
+				err := json.Indent(&prettyJSON, bodyEx, "", "\t")
+				if err != nil {
+					log.Fatal(err)
+				}
 
 				fmt.Fprintf(w, "%s", string(prettyJSON.Bytes()))
 			}
