@@ -32,16 +32,19 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Exchange History Endpoint")
 	vars := mux.Vars(r)
 	countryName := vars["country_name"]
-	resp, err := http.Get("https://restcountries.eu/rest/v2/name/" + countryName + "?fields=borders;currencies")
+	resp, err := http.Get("https://restcoutries.eu/rest/v2/name/" + countryName + "?fields=borders;currencies")
 
 	if err != nil {
-		// handle error
+		// Handles retrieval errors
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Bad request, %v", err)
 		w.WriteHeader(500)
 		return
 	}
 
 	if resp.StatusCode != 200 {
+		// Handles user input error
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		log.Println("Could not retrieve country")
 		w.WriteHeader(400)
 		return
@@ -50,6 +53,8 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(resp.Body)
 
 	if err != nil {
+		// Handles body read error
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Body read error, %v", err)
 		w.WriteHeader(500)
 		return
@@ -58,6 +63,8 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 	var information []Information
 
 	if err := json.Unmarshal([]byte(string(body)), &information); err != nil {
+		// Handles json parsing error
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Body parse error, %v", err)
 		w.WriteHeader(500)
 		return
@@ -66,7 +73,8 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 	splitdate := strings.Split(beginDateEndDate, "-")
 
 	if len(splitdate) < 6 {
-		// String error
+		// Handles tring error
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		log.Printf("Error in date query")
 		w.WriteHeader(400)
 		return
@@ -75,12 +83,15 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 	endDate := splitdate[3] + "-" + splitdate[4] + "-" + splitdate[5]
 	respEx, err := http.Get("https://api.exchangeratesapi.io/history?start_at=" + beginDate + "&end_at=" + endDate + "&symbols=" + information[0].Currencies[0].Code)
 	if err != nil {
-		// Handles
+		// Handles retrieval error
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Bad Request, %v", err)
 		w.WriteHeader(500)
 		return
 	}
 	if respEx.StatusCode != 200 {
+		// Handles user input error
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		log.Println("Could not retrieve exchange rates")
 		w.WriteHeader(400)
 		return
@@ -88,6 +99,8 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 	bodyEx, err := ioutil.ReadAll(respEx.Body)
 
 	if err != nil {
+		// Handles body read error
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Body read error, %v", err)
 		w.WriteHeader(500)
 		return
@@ -95,6 +108,8 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 	var prettyJSON bytes.Buffer
 	jsonErr := json.Indent(&prettyJSON, bodyEx, "", "\t")
 	if jsonErr != nil {
+		// Handles json indenting error
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("JSON indenting error, %v", err)
 		w.WriteHeader(500)
 		return
