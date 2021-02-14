@@ -12,9 +12,9 @@ import (
  */
 func handler() {
 	r := mux.NewRouter()
-	r.HandleFunc("/exchange/v1/exchangehistory/{country_name}/{begin_date-end_date}", exchangehistory).Queries("limit", "{limit}")
 	r.HandleFunc("/exchange/v1/exchangehistory/{country_name}/{begin_date-end_date}", exchangehistory)
-	r.HandleFunc("/exchange/v1/exchangeborder/", exchangeborder)
+	r.HandleFunc("/exchange/v1/exchangeborder/{country_name}{?limit={:number}}", exchangeborder).Queries("limit", "{limit}")
+	r.HandleFunc("/exchange/v1/exchangeborder/{country_name}", exchangeborder)
 	r.HandleFunc("/exchange/v1/diag/", diag)
 	http.Handle("/", r)
 }
