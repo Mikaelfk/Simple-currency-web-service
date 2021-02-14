@@ -69,7 +69,7 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 	splitdate := strings.Split(beginDateEndDate, "-")
 
 	if len(splitdate) < 6 {
-		// Handles tring error
+		// Handles string error
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		log.Printf("Error in date query")
 		return
