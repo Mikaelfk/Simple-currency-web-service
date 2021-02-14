@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"strings"
 
@@ -27,6 +28,7 @@ type Information struct {
  * between a requested time period.
  */
 func exchangehistory(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	fmt.Println("Exchange History Endpoint")
 	vars := mux.Vars(r)
 	countryName := vars["country_name"]
@@ -34,6 +36,7 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		// handle error
+		log.Fatal(err)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
@@ -41,7 +44,7 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 	var information []Information
 
 	if resp.StatusCode != 200 {
-		fmt.Fprint(w, "Error")
+		fmt.Fprint(w, "Error while retrieving country currency")
 	} else {
 		json.Unmarshal([]byte(string(body)), &information)
 		beginDateEndDate := vars["begin_date-end_date"]
@@ -55,6 +58,7 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 			respEx, err := http.Get("https://api.exchangeratesapi.io/history?start_at=" + beginDate + "&end_at=" + endDate + "&symbols=" + information[0].Currencies[0].Code)
 			if err != nil {
 				// handle error
+				log.Fatal(err)
 			}
 
 			bodyEx, _ := ioutil.ReadAll(respEx.Body)
