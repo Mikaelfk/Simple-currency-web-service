@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -32,35 +33,20 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Exchange History Endpoint")
 	vars := mux.Vars(r)
 	countryName := vars["country_name"]
-	resp, err := http.Get("https://restcountries.eu/rest/v2/name/" + countryName + "?fields=borders;currencies")
+
+	body, err := getResponse("https://restcountries.eu/rest/v2/name/" + countryName + "?fields=borders;currencies")
 
 	if err != nil {
-		// Handles retrieval errors
-		log.Printf("Bad request, %v", err)
-		return
-	}
-
-	if resp.StatusCode != 200 {
-		// Handles user input error
-		log.Println("Could not retrieve country")
-		return
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-
-	if err != nil {
-		// Handles body read error
-		log.Printf("Body read error, %v", err)
 		return
 	}
 
 	var information []Information
-
 	if err := json.Unmarshal([]byte(string(body)), &information); err != nil {
 		// Handles json parsing error
 		log.Printf("Body parse error, %v", err)
 		return
 	}
+
 	beginDateEndDate := vars["begin_date-end_date"]
 	splitdate := strings.Split(beginDateEndDate, "-")
 
@@ -71,26 +57,8 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 	}
 	beginDate := splitdate[0] + "-" + splitdate[1] + "-" + splitdate[2]
 	endDate := splitdate[3] + "-" + splitdate[4] + "-" + splitdate[5]
-	respEx, err := http.Get("https://api.exchangeratesapi.io/history?start_at=" + beginDate + "&end_at=" + endDate + "&symbols=" + information[0].Currencies[0].Code)
-	if err != nil {
-		// Handles retrieval error
-		log.Printf("Bad Request, %v", err)
-		return
-	}
-	if respEx.StatusCode != 200 {
-		// Handles user input error
-		log.Println("Could not retrieve exchange rates")
-		return
-	}
-	bodyEx, err := ioutil.ReadAll(respEx.Body)
-
-	if err != nil {
-		// Handles body read error
-		log.Printf("Body read error, %v", err)
-		return
-	}
-
-	fmt.Fprintf(w, "%s", string(bodyEx))
+	body, err = getResponse("https://api.exchangeratesapi.io/history?start_at=" + beginDate + "&end_at=" + endDate + "&symbols=" + information[0].Currencies[0].Code)
+	fmt.Fprintf(w, "%s", string(body))
 }
 
 func exchangeborder(w http.ResponseWriter, r *http.Request) {
@@ -170,4 +138,29 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 
 func diag(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Diag Endpoint")
+}
+
+func getResponse(request string) ([]byte, error) {
+	resp, err := http.Get(request)
+
+	if err != nil {
+		// Handles retrieval errors
+		log.Printf("Bad request, %v", err)
+		return nil, err
+	}
+
+	if resp.StatusCode != 200 {
+		// Handles user input error
+		log.Println("Could not retrieve country")
+		return nil, errors.New("Could not retrieve country")
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+
+	if err != nil {
+		// Handles body read error
+		log.Printf("Body read error, %v", err)
+		return nil, err
+	}
+	return body, nil
 }
