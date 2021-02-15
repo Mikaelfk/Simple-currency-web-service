@@ -36,14 +36,12 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		// Handles retrieval errors
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Bad request, %v", err)
 		return
 	}
 
 	if resp.StatusCode != 200 {
 		// Handles user input error
-		http.Error(w, err.Error(), http.StatusBadRequest)
 		log.Println("Could not retrieve country")
 		return
 	}
@@ -52,7 +50,6 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		// Handles body read error
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Body read error, %v", err)
 		return
 	}
@@ -61,7 +58,6 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.Unmarshal([]byte(string(body)), &information); err != nil {
 		// Handles json parsing error
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Body parse error, %v", err)
 		return
 	}
@@ -70,7 +66,6 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 
 	if len(splitdate) < 6 {
 		// Handles string error
-		http.Error(w, err.Error(), http.StatusBadRequest)
 		log.Printf("Error in date query")
 		return
 	}
@@ -79,13 +74,11 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 	respEx, err := http.Get("https://api.exchangeratesapi.io/history?start_at=" + beginDate + "&end_at=" + endDate + "&symbols=" + information[0].Currencies[0].Code)
 	if err != nil {
 		// Handles retrieval error
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Bad Request, %v", err)
 		return
 	}
 	if respEx.StatusCode != 200 {
 		// Handles user input error
-		http.Error(w, err.Error(), http.StatusBadRequest)
 		log.Println("Could not retrieve exchange rates")
 		return
 	}
@@ -93,7 +86,6 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		// Handles body read error
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Body read error, %v", err)
 		return
 	}
