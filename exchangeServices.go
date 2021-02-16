@@ -13,20 +13,16 @@ import (
 	"github.com/gorilla/mux"
 )
 
-/*
- * Currency is a struct used to store information about a currency
- * retrieved from the third-party api's
- */
+//Currency is a struct used to store information about a currency
+//retrieved from the third-party api's
 type Currency struct {
 	Code   string
 	Name   string
 	Symbol string
 }
 
-/*
- * Information is a struct used to store information about a country
- * retrieved from the third-party api's
- */
+//Information is a struct used to store information about a country
+//retrieved from the third-party api's
 type Information struct {
 	Currencies []Currency
 	Borders    []string
