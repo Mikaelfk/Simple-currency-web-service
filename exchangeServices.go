@@ -94,6 +94,7 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 		// Handles body read error
 		log.Printf("Body read error, %v", err)
 		fmt.Fprintf(w, `{"error":"%v"}`, err)
+		return
 	}
 
 	//Stores the JSON information in the information variable
@@ -127,6 +128,8 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 		if err := json.Unmarshal([]byte(string(body)), &information2); err != nil {
 			// Handles json parsing error
 			log.Printf("Body parse error, %v", err)
+			fmt.Fprintf(w, `{"error":"%v"}`, err)
+			return
 		}
 		if len(information2.Currencies) != 0 {
 			currencies = append(currencies, information2.Currencies[0].Code)
@@ -147,7 +150,7 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 	//Requests the bordering countries exchange rates
 	fmt.Println(currenciesRequest)
 	if len(currenciesRequest) == 0 {
-		fmt.Fprint(w, `{"error":"Country has no bordering countries"}`)
+		fmt.Fprint(w, `{"error":"Country has no bordering countries, or no bordering countries with available currencies"}`)
 		return
 	}
 	body, err = getResponse("https://api.exchangeratesapi.io/latest?symbols=" + currenciesRequest + ";base=" + currencies[0])
@@ -176,7 +179,7 @@ func getResponse(request string) ([]byte, error) {
 
 	if resp.StatusCode != 200 {
 		// Handles user input error
-		log.Println("Status code is not 200")
+		log.Printf("Status code is not 200")
 		return nil, errors.New("Status code is not 200")
 	}
 
