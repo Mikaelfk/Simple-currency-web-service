@@ -58,6 +58,10 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 	beginDate := splitdate[0] + "-" + splitdate[1] + "-" + splitdate[2]
 	endDate := splitdate[3] + "-" + splitdate[4] + "-" + splitdate[5]
 	body, err = getResponse("https://api.exchangeratesapi.io/history?start_at=" + beginDate + "&end_at=" + endDate + "&symbols=" + information[0].Currencies[0].Code)
+	if err != nil {
+		return
+	}
+
 	fmt.Fprintf(w, "%s", string(body))
 }
 
@@ -67,79 +71,57 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	countryName := vars["country_name"]
-	resp, err := http.Get("https://restcountries.eu/rest/v2/name/" + countryName + "?fields=borders")
-
-	if err != nil {
-		// Handles retrieval errors
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		log.Printf("Bad request, %v", err)
-		return
-	}
-
-	if resp.StatusCode != 200 {
-		// Handles user input error
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		log.Println("Could not retrieve country")
-		return
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
+	//resp, err := http.Get("https://restcountries.eu/rest/v2/name/" + countryName + "?fields=borders")
+	body, err := getResponse("https://restcountries.eu/rest/v2/name/" + countryName + "?fields=borders")
 
 	if err != nil {
 		// Handles body read error
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Body read error, %v", err)
 		return
 	}
 
 	var information []Information
 
-	if err := json.Unmarshal([]byte(string(body)), &information); err != nil {
+	if err = json.Unmarshal([]byte(string(body)), &information); err != nil {
 		// Handles json parsing error
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Body parse error, %v", err)
 		return
 	}
 
 	limit := len(information[0].Borders)
-	if val, ok := vars["limit"]; ok {
-		limit, _ = strconv.Atoi(val)
+	val, ok := vars["limit"]
+	newLimit, err := strconv.Atoi(val)
+	if err != nil {
+		log.Printf("Conversion error, %v", err)
+		return
 	}
-	fmt.Println(limit)
-	currencies := make([]string, 0, limit)
+	if ok && newLimit < limit {
+		limit = newLimit
+	}
+	currencies := make([]string, limit, limit)
 	var information2 Information
 	for i := 0; i < limit; i++ {
-		resp, err = http.Get("https://restcountries.eu/rest/v2/alpha/" + information[0].Borders[i] + "?fields=currencies")
+		body, err = getResponse("https://restcountries.eu/rest/v2/alpha/" + information[0].Borders[i] + "?fields=currencies")
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			log.Printf("Bad request, %v", err)
-			return
-		}
-
-		body, err = ioutil.ReadAll(resp.Body)
-		if err != nil {
-			// Handles body read error
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			log.Printf("Body read error, %v", err)
 			return
 		}
 		if err := json.Unmarshal([]byte(string(body)), &information2); err != nil {
 			// Handles json parsing error
-			http.Error(w, err.Error(), http.StatusInternalServerError)
 			log.Printf("Body parse error, %v", err)
 			return
 		}
 		currencies[i] = information2.Currencies[0].Code
-		fmt.Println(information2.Currencies[0].Code)
 	}
-	fmt.Println(currencies)
-
+	fmt.Print(currencies)
 }
 
 func diag(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Diag Endpoint")
 }
 
+/*
+ * a function for getting the string response from a http get request
+ */
 func getResponse(request string) ([]byte, error) {
 	resp, err := http.Get(request)
 
