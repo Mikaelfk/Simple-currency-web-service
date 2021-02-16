@@ -13,12 +13,20 @@ import (
 	"github.com/gorilla/mux"
 )
 
+/*
+ * Currency is a struct used to store information about a currency
+ * retrieved from the third-party api's
+ */
 type Currency struct {
 	Code   string
 	Name   string
 	Symbol string
 }
 
+/*
+ * Information is a struct used to store information about a country
+ * retrieved from the third-party api's
+ */
 type Information struct {
 	Currencies []Currency
 	Borders    []string
@@ -65,13 +73,16 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s", string(body))
 }
 
+/*
+ * A function used to gather current exchange rates from the bordering countries of
+ * a requested country
+ */
 func exchangeborder(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Println("Exchange border Endpoint")
 
 	vars := mux.Vars(r)
 	countryName := vars["country_name"]
-	//resp, err := http.Get("https://restcountries.eu/rest/v2/name/" + countryName + "?fields=borders")
 	body, err := getResponse("https://restcountries.eu/rest/v2/name/" + countryName + "?fields=borders")
 
 	if err != nil {
