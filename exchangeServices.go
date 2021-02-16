@@ -94,7 +94,6 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 		// Handles body read error
 		log.Printf("Body read error, %v", err)
 		fmt.Fprintf(w, `{"error":"%v"}`, err)
-		return
 	}
 
 	//Stores the JSON information in the information variable
@@ -136,9 +135,13 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 	//Removes all duplicate currencies in the slice
 	currencies = unique(currencies)
 	var currenciesRequest string
+	validCodes := []string{"CAD", "HKD", "ISK", "PHP", "DKK", "HUF", "CZK", "GBP", "RON", "SEK", "IDR", "INR", "BRL",
+		"RUB", "HRK", "JPY", "THB", "CHF", "EUR", "MYR", "BGN", "TRY", "CNY", "NOK", "NZD", "ZAR", "USD", "MXN", "SGD", "AUD", "ILS", "KRW", "PLN"}
 	//Saves the currencies in a single string with a comma between each currency.
 	for i := 1; i < len(currencies); i++ {
-		currenciesRequest += currencies[i] + ","
+		if stringInSlice(currencies[i], validCodes) {
+			currenciesRequest += currencies[i] + ","
+		}
 	}
 	currenciesRequest = strings.TrimRight(currenciesRequest, ",")
 	//Requests the bordering countries exchange rates
@@ -200,4 +203,13 @@ func unique(stringSlice []string) []string {
 		}
 	}
 	return list
+}
+
+func stringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
 }
