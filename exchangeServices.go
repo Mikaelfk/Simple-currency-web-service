@@ -79,7 +79,7 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	countryName := vars["country_name"]
-	body, err := getResponse("https://restcountries.eu/rest/v2/name/" + countryName + "?fields=borders")
+	body, err := getResponse("https://restcountries.eu/rest/v2/name/" + countryName + "?fields=borders;currencies")
 
 	if err != nil {
 		// Handles body read error
@@ -105,7 +105,9 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 	if ok && newLimit < limit {
 		limit = newLimit
 	}
-	currencies := make([]string, limit, limit)
+	currencies := make([]string, limit+1, limit+1)
+
+	currencies[0] = information[0].Currencies[0].Code
 	var information2 Information
 	for i := 0; i < limit; i++ {
 		body, err = getResponse("https://restcountries.eu/rest/v2/alpha/" + information[0].Borders[i] + "?fields=currencies")
@@ -117,7 +119,7 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Body parse error, %v", err)
 			return
 		}
-		currencies[i] = information2.Currencies[0].Code
+		currencies[i+1] = information2.Currencies[0].Code
 	}
 	fmt.Print(currencies)
 }
