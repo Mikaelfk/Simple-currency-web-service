@@ -41,6 +41,7 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 	body, err := getResponse("https://restcountries.eu/rest/v2/name/" + countryName + "?fields=currencies")
 
 	if err != nil {
+		fmt.Fprintf(w, `{"error":"%v"}`, err)
 		return
 	}
 	//Saves the currencies in an array of Information structs
@@ -49,6 +50,7 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 	if err := json.Unmarshal([]byte(string(body)), &information); err != nil {
 		// Handles json parsing error
 		log.Printf("Body parse error, %v", err)
+		fmt.Fprintf(w, `{"error":"%v"}`, err)
 		return
 	}
 
@@ -58,7 +60,9 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 
 	if len(splitdate) < 6 {
 		// Handles string error
-		log.Printf("Error in date query")
+		err = errors.New("Error in date query")
+		log.Printf("Error, %v", err)
+		fmt.Fprintf(w, `{"error":"%v"}`, err)
 		return
 	}
 	//Splits the dates into two differen strings
@@ -66,6 +70,7 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 	endDate := splitdate[3] + "-" + splitdate[4] + "-" + splitdate[5]
 	body, err = getResponse("https://api.exchangeratesapi.io/history?start_at=" + beginDate + "&end_at=" + endDate + "&symbols=" + information[0].Currencies[0].Code)
 	if err != nil {
+		fmt.Fprintf(w, `{"error":"%v"}`, err)
 		return
 	}
 
@@ -88,6 +93,7 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// Handles body read error
 		log.Printf("Body read error, %v", err)
+		fmt.Fprintf(w, `{"error":"%v"}`, err)
 		return
 	}
 
@@ -96,6 +102,7 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 	if err = json.Unmarshal([]byte(string(body)), &information); err != nil {
 		// Handles json parsing error
 		log.Printf("Body parse error, %v", err)
+		fmt.Fprintf(w, `{"error":"%v"}`, err)
 		return
 	}
 
@@ -115,14 +122,16 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 	for i := 0; i < limit; i++ {
 		body, err = getResponse("https://restcountries.eu/rest/v2/alpha/" + information[0].Borders[i] + "?fields=currencies")
 		if err != nil {
+			fmt.Fprintf(w, `{"error":"%v"}`, err)
 			return
 		}
 		if err := json.Unmarshal([]byte(string(body)), &information2); err != nil {
 			// Handles json parsing error
 			log.Printf("Body parse error, %v", err)
-			return
 		}
-		currencies = append(currencies, information2.Currencies[0].Code)
+		if len(information2.Currencies) != 0 {
+			currencies = append(currencies, information2.Currencies[0].Code)
+		}
 	}
 	//Removes all duplicate currencies in the slice
 	currencies = unique(currencies)
@@ -133,8 +142,14 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 	}
 	currenciesRequest = strings.TrimRight(currenciesRequest, ",")
 	//Requests the bordering countries exchange rates
+	fmt.Println(currenciesRequest)
+	if len(currenciesRequest) == 0 {
+		fmt.Fprint(w, `{"error":"Country has no bordering countries"}`)
+		return
+	}
 	body, err = getResponse("https://api.exchangeratesapi.io/latest?symbols=" + currenciesRequest + ";base=" + currencies[0])
 	if err != nil {
+		fmt.Fprintf(w, `{"error":"%v"}`, err)
 		return
 	}
 	fmt.Fprint(w, string(body))
