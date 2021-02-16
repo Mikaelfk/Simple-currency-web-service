@@ -37,13 +37,14 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Exchange History Endpoint")
 	vars := mux.Vars(r)
 	countryName := vars["country_name"]
-
-	body, err := getResponse("https://restcountries.eu/rest/v2/name/" + countryName + "?fields=borders;currencies")
+	//Requests the country's currencies
+	body, err := getResponse("https://restcountries.eu/rest/v2/name/" + countryName + "?fields=currencies")
 
 	if err != nil {
 		return
 	}
-
+	//Saves the currencies in an array of Information structs
+	//Because of the way the third-party API works, information needs to be an array.
 	var information []Information
 	if err := json.Unmarshal([]byte(string(body)), &information); err != nil {
 		// Handles json parsing error
@@ -52,6 +53,7 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	beginDateEndDate := vars["begin_date-end_date"]
+	//Splits the dates into an array
 	splitdate := strings.Split(beginDateEndDate, "-")
 
 	if len(splitdate) < 6 {
@@ -59,6 +61,7 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error in date query")
 		return
 	}
+	//Splits the dates into two differen strings
 	beginDate := splitdate[0] + "-" + splitdate[1] + "-" + splitdate[2]
 	endDate := splitdate[3] + "-" + splitdate[4] + "-" + splitdate[5]
 	body, err = getResponse("https://api.exchangeratesapi.io/history?start_at=" + beginDate + "&end_at=" + endDate + "&symbols=" + information[0].Currencies[0].Code)
@@ -79,6 +82,7 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	countryName := vars["country_name"]
+	//Gets the requested country's currency and its bordering countries
 	body, err := getResponse("https://restcountries.eu/rest/v2/name/" + countryName + "?fields=borders;currencies")
 
 	if err != nil {
@@ -87,8 +91,8 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//Stores the JSON information in the information variable
 	var information []Information
-
 	if err = json.Unmarshal([]byte(string(body)), &information); err != nil {
 		// Handles json parsing error
 		log.Printf("Body parse error, %v", err)
@@ -96,14 +100,17 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	limit := len(information[0].Borders)
+	//Checks if the user has requested a limit on how many countries should be checked
 	val, ok := vars["limit"]
 	newLimit, err := strconv.Atoi(val)
 	if ok && newLimit < limit {
 		limit = newLimit
 	}
-	currencies := make([]string, limit+1, limit+1)
-
-	currencies[0] = information[0].Currencies[0].Code
+	var currencies []string
+	//Saves the requested country's currency in index 0 in the currencies array.
+	currencies = append(currencies, information[0].Currencies[0].Code)
+	//Requests all the bordering countries' currencies
+	//This variable does not need to be a slice, again because of how to API works
 	var information2 Information
 	for i := 0; i < limit; i++ {
 		body, err = getResponse("https://restcountries.eu/rest/v2/alpha/" + information[0].Borders[i] + "?fields=currencies")
@@ -115,15 +122,17 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Body parse error, %v", err)
 			return
 		}
-		currencies[i+1] = information2.Currencies[0].Code
+		currencies = append(currencies, information2.Currencies[0].Code)
 	}
-	fmt.Print(currencies)
+	//Removes all duplicate currencies in the slice
 	currencies = unique(currencies)
 	var currenciesRequest string
+	//Saves the currencies in a single string with a comma between each currency.
 	for i := 1; i < len(currencies); i++ {
 		currenciesRequest += currencies[i] + ","
 	}
 	currenciesRequest = strings.TrimRight(currenciesRequest, ",")
+	//Requests the bordering countries exchange rates
 	body, err = getResponse("https://api.exchangeratesapi.io/latest?symbols=" + currenciesRequest + ";base=" + currencies[0])
 	if err != nil {
 		return
