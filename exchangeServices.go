@@ -98,10 +98,6 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 	limit := len(information[0].Borders)
 	val, ok := vars["limit"]
 	newLimit, err := strconv.Atoi(val)
-	if err != nil {
-		log.Printf("Conversion error, %v", err)
-		return
-	}
 	if ok && newLimit < limit {
 		limit = newLimit
 	}
@@ -122,6 +118,17 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 		currencies[i+1] = information2.Currencies[0].Code
 	}
 	fmt.Print(currencies)
+	currencies = unique(currencies)
+	var currenciesRequest string
+	for i := 1; i < len(currencies); i++ {
+		currenciesRequest += currencies[i] + ","
+	}
+	currenciesRequest = strings.TrimRight(currenciesRequest, ",")
+	body, err = getResponse("https://api.exchangeratesapi.io/latest?symbols=" + currenciesRequest + ";base=" + currencies[0])
+	if err != nil {
+		return
+	}
+	fmt.Fprint(w, string(body))
 }
 
 func diag(w http.ResponseWriter, r *http.Request) {
@@ -142,8 +149,8 @@ func getResponse(request string) ([]byte, error) {
 
 	if resp.StatusCode != 200 {
 		// Handles user input error
-		log.Println("Could not retrieve country")
-		return nil, errors.New("Could not retrieve country")
+		log.Println("Status code is not 200")
+		return nil, errors.New("Status code is not 200")
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
@@ -154,4 +161,19 @@ func getResponse(request string) ([]byte, error) {
 		return nil, err
 	}
 	return body, nil
+}
+
+/*
+ * A function for removing all duplicate elements from a string slice
+ */
+func unique(stringSlice []string) []string {
+	keys := make(map[string]bool)
+	list := []string{}
+	for _, entry := range stringSlice {
+		if _, value := keys[entry]; !value {
+			keys[entry] = true
+			list = append(list, entry)
+		}
+	}
+	return list
 }
