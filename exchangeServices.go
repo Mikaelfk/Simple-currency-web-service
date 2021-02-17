@@ -213,7 +213,7 @@ func getResponse(request string) ([]byte, error) {
 	if resp.StatusCode < 200 && resp.StatusCode > 299 {
 		// Handles user input error
 		log.Printf("Status code is not 2xx")
-		return nil, errors.New("Status code is not 200")
+		return nil, errors.New("Status code is not 2xx")
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
