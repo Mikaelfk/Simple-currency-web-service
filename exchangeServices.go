@@ -31,7 +31,7 @@ type Information struct {
 
 /*
  * A function which retrieves the exchange history of a currency of a requested country
- * between a requested time period.
+ * between a requested time period
  */
 func exchangehistory(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
@@ -46,7 +46,7 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	//Saves the currencies in an array of Information structs
-	//Because of the way the third-party API works, information needs to be an array.
+	//Because of the way the third-party API works, information needs to be an array
 	var information []Information
 	if err := json.Unmarshal([]byte(string(body)), &information); err != nil {
 		// Handles json parsing error
@@ -115,7 +115,7 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 		limit = newLimit
 	}
 	var currencies []string
-	//Saves the requested country's currency in index 0 in the currencies array.
+	//Saves the requested country's currency in index 0 in the currencies array
 	currencies = append(currencies, information[0].Currencies[0].Code)
 	//Requests all the bordering countries' currencies
 	//This variable does not need to be a slice, again because of how to API works
@@ -141,7 +141,7 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 	var currenciesRequest string
 	validCodes := []string{"CAD", "HKD", "ISK", "PHP", "DKK", "HUF", "CZK", "GBP", "RON", "SEK", "IDR", "INR", "BRL",
 		"RUB", "HRK", "JPY", "THB", "CHF", "EUR", "MYR", "BGN", "TRY", "CNY", "NOK", "NZD", "ZAR", "USD", "MXN", "SGD", "AUD", "ILS", "KRW", "PLN"}
-	//Saves the currencies in a single string with a comma between each currency.
+	//Saves the currencies in a single string with a comma between each currency
 	for i := 1; i < len(currencies); i++ {
 		if stringInSlice(currencies[i], validCodes) {
 			currenciesRequest += currencies[i] + ","
@@ -162,12 +162,19 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(body))
 }
 
+/*
+ * a function which returns some information about the program, including status codes for the API's used,
+ * version and uptime
+ */
 func diag(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Println("Diag Endpoint")
 	var exchangeStatusCode int
 	var countriesStatusCode int
+	// Does a basic request to the exchange rates api.
 	respExchange, err := http.Get("https://api.exchangeratesapi.io/")
+	// If any errors occur, log it and set the status code to 500,
+	// otherwise set the status code to the recieved status code
 	if err != nil {
 		log.Printf("Bad request, %v", err)
 		exchangeStatusCode = 500
@@ -175,7 +182,10 @@ func diag(w http.ResponseWriter, r *http.Request) {
 		exchangeStatusCode = respExchange.StatusCode
 		defer respExchange.Body.Close()
 	}
+	// Does a basic request to the countries information api.
 	respCountries, err := http.Get("https://restcountries.eu")
+	// If any errors occur, log it and set the status code to 500,
+	// otherwise set the status code to the recieved status code
 	if err != nil {
 		log.Printf("Bad request, %v", err)
 		countriesStatusCode = 500
@@ -183,6 +193,7 @@ func diag(w http.ResponseWriter, r *http.Request) {
 		countriesStatusCode = respCountries.StatusCode
 		defer respCountries.Body.Close()
 	}
+	// Print the information in JSON format
 	fmt.Fprintf(w, `{"exchangeratesapi": "%v", "restcountries": "%v", "version": "v1", "uptime": "%v Seconds"}`,
 		exchangeStatusCode, countriesStatusCode, int(time.Since(startTime)/time.Second))
 }
@@ -230,6 +241,10 @@ func unique(stringSlice []string) []string {
 	return list
 }
 
+/*
+ * A function for checking if a string is in a slice
+ * Returns a boolean value
+ */
 func stringInSlice(a string, list []string) bool {
 	for _, b := range list {
 		if b == a {
