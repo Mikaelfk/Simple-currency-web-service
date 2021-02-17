@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -158,11 +159,32 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"error":"%v"}`, err)
 		return
 	}
-	fmt.Fprint(w, string(body))
+	fmt.Fprintf(w, string(body))
 }
 
 func diag(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	fmt.Println("Diag Endpoint")
+	var exchangeStatusCode int
+	var countriesStatusCode int
+	respExchange, err := http.Get("https://api.exchangeratesapi.io/")
+	if err != nil {
+		log.Printf("Bad request, %v", err)
+		exchangeStatusCode = 404
+	} else {
+		exchangeStatusCode = respExchange.StatusCode
+		defer respExchange.Body.Close()
+	}
+	respCountries, err := http.Get("https://restcountries.eu")
+	if err != nil {
+		log.Printf("Bad request, %v", err)
+		countriesStatusCode = 404
+	} else {
+		countriesStatusCode = respCountries.StatusCode
+		defer respCountries.Body.Close()
+	}
+	fmt.Fprintf(w, `{"exchangeratesapi": "%v", "restcountries": "%v", "version": "v1", "uptime": "%v Seconds"}`,
+		exchangeStatusCode, countriesStatusCode, int(time.Since(startTime)/time.Second))
 }
 
 /*
@@ -177,12 +199,12 @@ func getResponse(request string) ([]byte, error) {
 		return nil, err
 	}
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode < 200 && resp.StatusCode > 299 {
 		// Handles user input error
-		log.Printf("Status code is not 200")
+		log.Printf("Status code is not 2xx")
 		return nil, errors.New("Status code is not 200")
 	}
-
+	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 
 	if err != nil {
