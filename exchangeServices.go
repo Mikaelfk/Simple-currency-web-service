@@ -170,7 +170,7 @@ func diag(w http.ResponseWriter, r *http.Request) {
 	respExchange, err := http.Get("https://api.exchangeratesapi.io/")
 	if err != nil {
 		log.Printf("Bad request, %v", err)
-		exchangeStatusCode = 404
+		exchangeStatusCode = 500
 	} else {
 		exchangeStatusCode = respExchange.StatusCode
 		defer respExchange.Body.Close()
@@ -178,7 +178,7 @@ func diag(w http.ResponseWriter, r *http.Request) {
 	respCountries, err := http.Get("https://restcountries.eu")
 	if err != nil {
 		log.Printf("Bad request, %v", err)
-		countriesStatusCode = 404
+		countriesStatusCode = 500
 	} else {
 		countriesStatusCode = respCountries.StatusCode
 		defer respCountries.Body.Close()
