@@ -210,7 +210,7 @@ func getResponse(request string) ([]byte, error) {
 		return nil, err
 	}
 
-	if resp.StatusCode < 200 && resp.StatusCode > 299 {
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		// Handles user input error
 		log.Printf("Status code is not 2xx")
 		return nil, errors.New("Status code is not 2xx")
