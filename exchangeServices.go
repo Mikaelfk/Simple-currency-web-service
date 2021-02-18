@@ -14,16 +14,16 @@ import (
 	"github.com/gorilla/mux"
 )
 
-//Currency is a struct used to store information about a currency
-//retrieved from the third-party api's
+// Currency is a struct used to store information about a currency
+// retrieved from the third-party api's
 type Currency struct {
 	Code   string
 	Name   string
 	Symbol string
 }
 
-//Information is a struct used to store information about a country
-//retrieved from the third-party api's
+// Information is a struct used to store information about a country
+// retrieved from the third-party api's
 type Information struct {
 	Currencies []Currency
 	Borders    []string
@@ -38,40 +38,41 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Exchange History Endpoint")
 	vars := mux.Vars(r)
 	countryName := vars["country_name"]
-	//Requests the country's currencies
-	body, err := getResponse("https://restcountries.eu/rest/v2/name/" + countryName + "?fields=currencies")
-
+	// Requests the country's currencies
+	body, err := getResponse("https://restcountries.eu/rest/v2/name/"+countryName+"?fields=currencies", w)
+	// If there is an error, log it and return
 	if err != nil {
-		fmt.Fprintf(w, `{"error":"%v"}`, err)
+		log.Printf("Error: %v", err)
 		return
 	}
-	//Saves the currencies in an array of Information structs
-	//Because of the way the third-party API works, information needs to be an array
+	// Saves the currencies in an array of Information structs
+	// Because of the way the third-party API works, information needs to be an array
 	var information []Information
 	if err := json.Unmarshal([]byte(string(body)), &information); err != nil {
 		// Handles json parsing error
-		log.Printf("Body parse error, %v", err)
-		fmt.Fprintf(w, `{"error":"%v"}`, err)
+		log.Printf("Error: %v", err)
+		http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	beginDateEndDate := vars["begin_date-end_date"]
-	//Splits the dates into an array
+	// Splits the dates into an array
 	splitdate := strings.Split(beginDateEndDate, "-")
 
 	if len(splitdate) < 6 {
 		// Handles string error
 		err = errors.New("Error in date query")
 		log.Printf("Error, %v", err)
-		fmt.Fprintf(w, `{"error":"%v"}`, err)
+		http.Error(w, "Error: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	//Splits the dates into two differen strings
+	// Splits the dates into two differen strings
 	beginDate := splitdate[0] + "-" + splitdate[1] + "-" + splitdate[2]
 	endDate := splitdate[3] + "-" + splitdate[4] + "-" + splitdate[5]
-	body, err = getResponse("https://api.exchangeratesapi.io/history?start_at=" + beginDate + "&end_at=" + endDate + "&symbols=" + information[0].Currencies[0].Code)
+	body, err = getResponse("https://api.exchangeratesapi.io/history?start_at="+beginDate+"&end_at="+endDate+"&symbols="+information[0].Currencies[0].Code, w)
+	// If any errors occur, log them and return
 	if err != nil {
-		fmt.Fprintf(w, `{"error":"%v"}`, err)
+		log.Printf("Error, %v", err)
 		return
 	}
 
@@ -88,75 +89,75 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	countryName := vars["country_name"]
-	//Gets the requested country's currency and its bordering countries
-	body, err := getResponse("https://restcountries.eu/rest/v2/name/" + countryName + "?fields=borders;currencies")
+	// Gets the requested country's currency and its bordering countries
+	body, err := getResponse("https://restcountries.eu/rest/v2/name/"+countryName+"?fields=borders;currencies", w)
 
+	// If any errors occur, log them and return
 	if err != nil {
-		// Handles body read error
-		log.Printf("Body read error, %v", err)
-		fmt.Fprintf(w, `{"error":"%v"}`, err)
+		log.Printf("Error: %v", err)
 		return
 	}
 
-	//Stores the JSON information in the information variable
+	// Stores the JSON information in the information variable
 	var information []Information
 	if err = json.Unmarshal([]byte(string(body)), &information); err != nil {
 		// Handles json parsing error
-		log.Printf("Body parse error, %v", err)
-		fmt.Fprintf(w, `{"error":"%v"}`, err)
+		log.Printf("Error: %v", err)
+		http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	limit := len(information[0].Borders)
-	//Checks if the user has requested a limit on how many countries should be checked
+	// Checks if the user has requested a limit on how many countries should be checked
 	val, ok := vars["limit"]
 	newLimit, err := strconv.Atoi(val)
 	if ok && newLimit < limit {
 		limit = newLimit
 	}
 	var currencies []string
-	//Saves the requested country's currency in index 0 in the currencies array
+	// Saves the requested country's currency in index 0 in the currencies array
 	currencies = append(currencies, information[0].Currencies[0].Code)
-	//Requests all the bordering countries' currencies
-	//This variable does not need to be a slice, again because of how to API works
+	// Requests all the bordering countries' currencies
+	// This variable does not need to be a slice, again because of how to API works
 	var information2 Information
 	for i := 0; i < limit; i++ {
-		body, err = getResponse("https://restcountries.eu/rest/v2/alpha/" + information[0].Borders[i] + "?fields=currencies")
+		body, err = getResponse("https://restcountries.eu/rest/v2/alpha/"+information[0].Borders[i]+"?fields=currencies", w)
+		// If any errors occur, log them and return
 		if err != nil {
-			fmt.Fprintf(w, `{"error":"%v"}`, err)
+			log.Printf("Error: %v", err)
 			return
 		}
 		if err := json.Unmarshal([]byte(string(body)), &information2); err != nil {
 			// Handles json parsing error
-			log.Printf("Body parse error, %v", err)
-			fmt.Fprintf(w, `{"error":"%v"}`, err)
+			log.Printf("Error: %v", err)
+			http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		if len(information2.Currencies) != 0 {
 			currencies = append(currencies, information2.Currencies[0].Code)
 		}
 	}
-	//Removes all duplicate currencies in the slice
+	// Removes all duplicate currencies in the slice
 	currencies = unique(currencies)
 	var currenciesRequest string
 	validCodes := []string{"CAD", "HKD", "ISK", "PHP", "DKK", "HUF", "CZK", "GBP", "RON", "SEK", "IDR", "INR", "BRL",
 		"RUB", "HRK", "JPY", "THB", "CHF", "EUR", "MYR", "BGN", "TRY", "CNY", "NOK", "NZD", "ZAR", "USD", "MXN", "SGD", "AUD", "ILS", "KRW", "PLN"}
-	//Saves the currencies in a single string with a comma between each currency
+	// Saves the currencies in a single string with a comma between each currency
 	for i := 1; i < len(currencies); i++ {
 		if stringInSlice(currencies[i], validCodes) {
 			currenciesRequest += currencies[i] + ","
 		}
 	}
 	currenciesRequest = strings.TrimRight(currenciesRequest, ",")
-	//Requests the bordering countries exchange rates
-	fmt.Println(currenciesRequest)
+	// Requests the bordering countries exchange rates
 	if len(currenciesRequest) == 0 {
-		fmt.Fprint(w, `{"error":"Country has no bordering countries, or no bordering countries with available currencies"}`)
+		log.Printf("Error: No bordering countries or no bordering countries with an available currency")
+		http.Error(w, "Error: No bordering countries or no bordering countries with an available currency", http.StatusBadRequest)
 		return
 	}
-	body, err = getResponse("https://api.exchangeratesapi.io/latest?symbols=" + currenciesRequest + ";base=" + currencies[0])
+	body, err = getResponse("https://api.exchangeratesapi.io/latest?symbols="+currenciesRequest+";base="+currencies[0], w)
 	if err != nil {
-		fmt.Fprintf(w, `{"error":"%v"}`, err)
+		log.Printf("Error: %v", err)
 		return
 	}
 	fmt.Fprintf(w, string(body))
@@ -176,7 +177,7 @@ func diag(w http.ResponseWriter, r *http.Request) {
 	// If any errors occur, log it and set the status code to 500,
 	// otherwise set the status code to the recieved status code
 	if err != nil {
-		log.Printf("Bad request, %v", err)
+		log.Printf("Something went wrong with the exchange rates api, %v", err)
 		exchangeStatusCode = 500
 	} else {
 		exchangeStatusCode = respExchange.StatusCode
@@ -187,7 +188,7 @@ func diag(w http.ResponseWriter, r *http.Request) {
 	// If any errors occur, log it and set the status code to 500,
 	// otherwise set the status code to the recieved status code
 	if err != nil {
-		log.Printf("Bad request, %v", err)
+		log.Printf("Something went wrong with the countries api, %v", err)
 		countriesStatusCode = 500
 	} else {
 		countriesStatusCode = respCountries.StatusCode
@@ -201,26 +202,26 @@ func diag(w http.ResponseWriter, r *http.Request) {
 /*
  * a function for getting the string response from a http get request
  */
-func getResponse(request string) ([]byte, error) {
+func getResponse(request string, w http.ResponseWriter) ([]byte, error) {
 	resp, err := http.Get(request)
 
 	if err != nil {
 		// Handles retrieval errors
-		log.Printf("Bad request, %v", err)
+		http.Error(w, "Error: "+err.Error(), http.StatusBadRequest)
 		return nil, err
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		// Handles user input error
-		log.Printf("Status code is not 2xx")
-		return nil, errors.New("Status code is not 2xx")
+		http.Error(w, "Error: Error in query", resp.StatusCode)
+		return nil, errors.New("Error in query")
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 
 	if err != nil {
 		// Handles body read error
-		log.Printf("Body read error, %v", err)
+		http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
 		return nil, err
 	}
 	return body, nil
