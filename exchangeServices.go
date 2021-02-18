@@ -40,7 +40,7 @@ func exchangehistory(w http.ResponseWriter, r *http.Request) {
 	countryName := vars["country_name"]
 	// Requests the country's currencies
 	body, err := getResponse("https://restcountries.eu/rest/v2/name/"+countryName+"?fields=currencies", w)
-	// If there is an error, log it and return
+	// If any errors occur, log them and return
 	if err != nil {
 		log.Printf("Error: %v", err)
 		return
