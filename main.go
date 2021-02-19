@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -27,6 +28,11 @@ func handler() {
  * Main function that initialized the application
  */
 func main() {
+	port := os.Getenv("PORT")
+
+	if port == "" {
+		log.Fatal("$PORT must be set")
+	}
 	handler()
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
