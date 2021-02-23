@@ -21,6 +21,7 @@ func handler() {
 	r.HandleFunc("/exchange/v1/exchangeborder/{country_name}", exchangeborder).Queries("limit", "{limit}")
 	r.HandleFunc("/exchange/v1/exchangeborder/{country_name}", exchangeborder)
 	r.HandleFunc("/exchange/v1/diag/", diag)
+	r.HandleFunc("/exchange/v1/diag", diag)
 	http.Handle("/", r)
 }
 
