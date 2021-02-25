@@ -161,7 +161,7 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 	}
 	// Adds all the valid currency codes to the validCodes slice
 	var validCodes []string
-	for key, _ := range rates.Rates {
+	for key := range rates.Rates {
 		validCodes = append(validCodes, key)
 	}
 
