@@ -195,7 +195,7 @@ func diag(w http.ResponseWriter, r *http.Request) {
 		defer respCountries.Body.Close()
 	}
 	// Print the information in JSON format
-	fmt.Fprintf(w, `{"exchangeratesapi": "%v", "restcountries": "%v", "version": "v1", "uptime": "%v Seconds"}`,
+	fmt.Fprintf(w, `{"exchangeratesapi": "%v", "restcountries": "%v", "version": "v1", "uptime": %v}`,
 		exchangeStatusCode, countriesStatusCode, int(time.Since(startTime)/time.Second))
 }
 
