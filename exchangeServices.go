@@ -29,6 +29,11 @@ type Information struct {
 	Borders    []string
 }
 
+// Rates is a struct used to store all the exchange rates available in a map
+type Rates struct {
+	Rates map[string]float32
+}
+
 /*
  * A function which retrieves the exchange history of a currency of a requested country
  * between a requested time period
@@ -99,6 +104,7 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Stores the JSON information in the information variable
+	// This variable has to be a slice, I dont know why
 	var information []Information
 	if err = json.Unmarshal([]byte(string(body)), &information); err != nil {
 		// Handles json parsing error
@@ -118,7 +124,6 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 	// Saves the requested country's currency in index 0 in the currencies array
 	currencies = append(currencies, information[0].Currencies[0].Code)
 	// Requests all the bordering countries' currencies
-	// This variable does not need to be a slice, again because of how to API works
 	var information2 Information
 	for i := 0; i < limit; i++ {
 		body, err = getResponse("https://restcountries.eu/rest/v2/alpha/"+information[0].Borders[i]+"?fields=currencies", w)
@@ -140,8 +145,26 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 	// Removes all duplicate currencies in the slice
 	currencies = unique(currencies)
 	var currenciesRequest string
-	validCodes := []string{"CAD", "HKD", "ISK", "PHP", "DKK", "HUF", "CZK", "GBP", "RON", "SEK", "IDR", "INR", "BRL",
-		"RUB", "HRK", "JPY", "THB", "CHF", "EUR", "MYR", "BGN", "TRY", "CNY", "NOK", "NZD", "ZAR", "USD", "MXN", "SGD", "AUD", "ILS", "KRW", "PLN"}
+	// A request to get all the exchange rates available
+	body, err = getResponse("https://api.exchangeratesapi.io/latest", w)
+	// If any errors occur, log them and return
+	if err != nil {
+		log.Printf("Error: %v", err)
+		return
+	}
+	var rates Rates
+	if err := json.Unmarshal([]byte(string(body)), &rates); err != nil {
+		// Handles json parsing error
+		log.Printf("Error: %v", err)
+		http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// Adds all the valid currency codes to the validCodes slice
+	var validCodes []string
+	for key, _ := range rates.Rates {
+		validCodes = append(validCodes, key)
+	}
+
 	// Saves the currencies in a single string with a comma between each currency
 	for i := 1; i < len(currencies); i++ {
 		if stringInSlice(currencies[i], validCodes) {
