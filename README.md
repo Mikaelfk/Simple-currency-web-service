@@ -73,3 +73,8 @@ Path: diag/
 The service is deployed with [Heroku](https://heroku.com):
 
 https://assignment-1-mikaelfk.herokuapp.com
+
+Examples:
+https://assignment-1-mikaelfk.herokuapp.com/exchange/v1/exhangehistory/norway/2020-12-01-2021-01-31
+https://assignment-1-mikaelfk.herokuapp.com/exchange/v1/exhangeborder/sweden
+https://assignment-1-mikaelfk.herokuapp.com/exchange/v1/diag/
