@@ -32,6 +32,7 @@ type Information struct {
 // Rates is a struct used to store all the exchange rates available in a map
 type Rates struct {
 	Rates map[string]float32
+	Base  string
 }
 
 /*
@@ -164,6 +165,8 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 	for key := range rates.Rates {
 		validCodes = append(validCodes, key)
 	}
+	validCodes = append(validCodes, rates.Base)
+	fmt.Println(validCodes)
 
 	// Saves the currencies in a single string with a comma between each currency
 	for i := 1; i < len(currencies); i++ {
