@@ -117,10 +117,10 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Stores the JSON information in the informationOriginal variable
-	// This variable has to be a slice, I dont know why
-	var informationOriginal []Information
-	if err = json.Unmarshal([]byte(string(body)), &informationOriginal); err != nil {
+	// Stores the JSON information in the informationBase variable
+	// This variable has to be a slice, because the rest countries api could return multiple countries if they have similar nam
+	var informationBase []Information
+	if err = json.Unmarshal([]byte(string(body)), &informationBase); err != nil {
 		// Handles json parsing error
 		log.Printf("Error: %v", err)
 		http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
@@ -130,9 +130,9 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 	var exchangeborderResponse Exchangeborder
 
 	// Sets the base currency
-	exchangeborderResponse.Base = informationOriginal[0].Currencies[0].Code
+	exchangeborderResponse.Base = informationBase[0].Currencies[0].Code
 
-	limit := len(informationOriginal[0].Borders)
+	limit := len(informationBase[0].Borders)
 	// Checks if the user has requested a limit on how many countries should be checked
 	val, ok := vars["limit"]
 	newLimit, err := strconv.Atoi(val)
@@ -147,7 +147,7 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 
 	// Adds all the bordering countries country codes to the string
 	for i := 0; i < limit; i++ {
-		allBorderCodes += informationOriginal[0].Borders[i] + ";"
+		allBorderCodes += informationBase[0].Borders[i] + ";"
 	}
 	allBorderCodes = strings.TrimRight(allBorderCodes, ";")
 	// Checks if the string is empty
