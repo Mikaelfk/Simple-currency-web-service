@@ -117,10 +117,10 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Stores the JSON information in the information variable
+	// Stores the JSON information in the informationOriginal variable
 	// This variable has to be a slice, I dont know why
-	var information []Information
-	if err = json.Unmarshal([]byte(string(body)), &information); err != nil {
+	var informationOriginal []Information
+	if err = json.Unmarshal([]byte(string(body)), &informationOriginal); err != nil {
 		// Handles json parsing error
 		log.Printf("Error: %v", err)
 		http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
@@ -130,9 +130,9 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 	var exchangeborderResponse Exchangeborder
 
 	// Sets the base currency
-	exchangeborderResponse.Base = information[0].Currencies[0].Code
+	exchangeborderResponse.Base = informationOriginal[0].Currencies[0].Code
 
-	limit := len(information[0].Borders)
+	limit := len(informationOriginal[0].Borders)
 	// Checks if the user has requested a limit on how many countries should be checked
 	val, ok := vars["limit"]
 	newLimit, err := strconv.Atoi(val)
@@ -141,17 +141,13 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 	} else if ok && newLimit < limit {
 		limit = newLimit
 	}
-	// Makes a map that will be used to store what currency each country has
-	// The key in the map is the country, while the entry is the currency
-	var allCurrencies map[string]string
-	allCurrencies = make(map[string]string)
 
 	// Creates a string that will store all the bordering countries country code
 	var allBorderCodes string
 
 	// Adds all the bordering countries country codes to the string
 	for i := 0; i < limit; i++ {
-		allBorderCodes += information[0].Borders[i] + ";"
+		allBorderCodes += informationOriginal[0].Borders[i] + ";"
 	}
 	allBorderCodes = strings.TrimRight(allBorderCodes, ";")
 	// Checks if the string is empty
@@ -161,28 +157,30 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	// Requests the currencies and the name of the bordering countries
+	// Requests the currencies and the names of the bordering countries
 	body, err = getResponse("https://restcountries.eu/rest/v2/alpha?codes="+allBorderCodes+"&fields=currencies;name", w)
 	// If any errors occur, log them and return
 	if err != nil {
 		log.Printf("Error: %v", err)
 		return
 	}
-	// Unmarshal the information into information2
-	var information2 []Information
-	if err := json.Unmarshal([]byte(string(body)), &information2); err != nil {
+	// Unmarshal the information into informationBordering
+	var informationBordering []Information
+	if err := json.Unmarshal([]byte(string(body)), &informationBordering); err != nil {
 		// Handles json parsing error
 		log.Printf("Error: %v", err)
 		http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// If there are fewer countries than the set limit, reduce the limit to the amount of countries
-	if len(information2) < limit {
-		limit = len(information2)
-	}
+
+	// Makes a map that will be used to store what currency each country has
+	// The key in the map is the country, while the entry is the currency
+	var allCurrencies map[string]string
+	allCurrencies = make(map[string]string)
+
 	// Save the currencies in the allCurrencies map
 	for i := 0; i < limit; i++ {
-		allCurrencies[information2[i].Name] = information2[i].Currencies[0].Code
+		allCurrencies[informationBordering[i].Name] = informationBordering[i].Currencies[0].Code
 	}
 
 	// A request to get all the exchange rates available
@@ -192,8 +190,8 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error: %v", err)
 		return
 	}
-	var rates Rates
-	if err := json.Unmarshal([]byte(string(body)), &rates); err != nil {
+	var allRates Rates
+	if err := json.Unmarshal([]byte(string(body)), &allRates); err != nil {
 		// Handles json parsing error
 		log.Printf("Error: %v", err)
 		http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
@@ -201,10 +199,10 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 	}
 	// Adds all the valid currency codes to the validCodes slice
 	var validCodes []string
-	for key := range rates.Rates {
+	for key := range allRates.Rates {
 		validCodes = append(validCodes, key)
 	}
-	validCodes = append(validCodes, rates.Base)
+	validCodes = append(validCodes, allRates.Base)
 	// Checks if all the currencies are valid.
 	var allCurrenciesSlice []string
 	for _, entry := range allCurrencies {
@@ -219,6 +217,7 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+
 	// Makes sure that there are bordering countries with available currencies
 	if len(allCurrenciesSlice) == 0 {
 		err = errors.New("No bordering countries with an available currency")
@@ -243,9 +242,9 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error: %v", err)
 		return
 	}
-	// Saves the information in the rates2 variable
-	var rates2 Rates
-	if err := json.Unmarshal([]byte(string(body)), &rates2); err != nil {
+	// Saves the information in the ratesBordering variable
+	var ratesBordering Rates
+	if err := json.Unmarshal([]byte(string(body)), &ratesBordering); err != nil {
 		// Handles json parsing error
 		log.Printf("Error: %v", err)
 		http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
@@ -259,7 +258,7 @@ func exchangeborder(w http.ResponseWriter, r *http.Request) {
 	// Add all exchange rates and currencies to the responseMap variable, delete countries that do not have available currencies
 	for key, entry := range allCurrencies {
 		if stringInSlice(entry, validCodes) {
-			exchangeRate := rates2.Rates[entry]
+			exchangeRate := ratesBordering.Rates[entry]
 			if entry == exchangeborderResponse.Base {
 				exchangeRate = 1
 			}
